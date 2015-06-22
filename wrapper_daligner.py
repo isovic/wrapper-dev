@@ -152,20 +152,20 @@ def run(reads_file, reference_file, machine_name, output_path, output_suffix='')
 	num_threads = multiprocessing.cpu_count() / 2;
 
 	if ((machine_name.lower() == 'illumina') or (machine_name.lower() == 'roche')):
-		parameters = '-t %s' % str(num_threads);
+		parameters = '-vd';
 
 	elif ((machine_name.lower() == 'pacbio')):
 		# parameters = '-t %s -x pacbio' % str(num_threads);
 		parameters = '-vd';
 
 	elif ((machine_name.lower() == 'nanopore')):
-		parameters = '-t %s -x ont2d' % str(num_threads);
+		parameters = '-vd';
 
-	elif ((machine_name.lower() == 'debug')):
-		parameters = '-t %s' % str(num_threads);
+	# elif ((machine_name.lower() == 'debug')):
+	# 	parameters = '-t %s' % str(num_threads);
 
 	else:			# default
-		parameters = '-t %s' % str(num_threads);
+		parameters = '-vd';
 
 
 
