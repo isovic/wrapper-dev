@@ -682,7 +682,7 @@ def run(run_type, reads_file, reference_file, machine_name, output_path, output_
 	num_threads = multiprocessing.cpu_count() / 2;
 
 	if ((machine_name.lower() == 'illumina') or (machine_name.lower() == 'roche')):
-		parameters = '-v';	### I get poor results on Illumina data (simulated), concretely DALIGNER mapps 0 reads. I think the problem is 'alignment but simply a set of trace points, typically every 100bp or so, that allow the', and reads that I simulated were 150bp in length.
+		parameters = '-v -s1 -h10 -e.9';	### I get poor results on Illumina data (simulated), concretely DALIGNER mapps 0 reads. I think the problem is 'alignment but simply a set of trace points, typically every 100bp or so, that allow the', and reads that I simulated were 150bp in length.
 
 	elif ((machine_name.lower() == 'pacbio')):
 		# parameters = '-t %s -x pacbio' % str(num_threads);
