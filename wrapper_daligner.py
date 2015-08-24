@@ -110,7 +110,122 @@ def measure_command_wrapper(out_filename):
 	if (USE_BASICDEFINES_ == True):
 		return basicdefines.measure_command(out_filename);
 	else:
-		return '';
+		return '/usr/bin/time --format "Command line: %%C\\nReal time: %%e s\\nCPU time: -1.0 s\\nUser time: %%U s\\nSystem time: %%S s\\nMaximum RSS: %%M kB\\nExit status: %%x" --quiet -o %s ' % out_filename;
+
+def parse_memtime(memtime_path):
+	cmdline = '';
+	realtime = 0;
+	cputime = 0;
+	usertime = 0;
+	systemtime = 0;
+	maxrss = 0;
+	rsscache = 0;
+	time_unit = '';
+	mem_unit = '';
+
+	try:
+		fp = open(memtime_path, 'r');
+		lines = [line.strip() for line in fp.readlines() if (len(line.strip()) > 0)];
+		fp.close();
+	except Exception, e:
+		sys.stderr.write('Could not find memory and time statistics in file "%s".\n' % (memtime_path));
+		return [cmdline, realtime, cputime, usertime, systemtime, maxrss, time_unit, mem_unit];
+
+	for line in lines:
+		if (line.startswith('Command line:')):
+			cmdline = line.split(':')[1].strip();
+		elif (line.startswith('Real time:')):
+			split_line = line.split(':')[1].strip().split(' ');
+			realtime = float(split_line[0].strip());
+			time_unit = split_line[1].strip();
+		elif (line.startswith('CPU time:')):
+			split_line = line.split(':')[1].strip().split(' ');
+			cputime = float(split_line[0].strip());
+			time_unit = split_line[1].strip();
+		elif (line.startswith('User time:')):
+			split_line = line.split(':')[1].strip().split(' ');
+			usertime = float(split_line[0].strip());
+			time_unit = split_line[1].strip();
+		elif (line.startswith('System time:')):
+			split_line = line.split(':')[1].strip().split(' ');
+			systemtime = float(split_line[0].strip());
+			time_unit = split_line[1].strip();
+		elif (line.startswith('Maximum RSS:')):
+			split_line = line.split(':')[1].strip().split(' ');
+			maxrss = float(split_line[0].strip());
+			mem_unit = split_line[1].strip();
+		# elif (line.startswith('')):
+		# 	split_line = line.split(':')[1].strip().split(' ');
+		# 	rsscache = float(split_line[0].strip());
+		# 	mem_unit = split_line[1].strip();
+
+	return [cmdline, realtime, cputime, usertime, systemtime, maxrss, time_unit, mem_unit];
+
+def parse_memtime_files_and_accumulate(memtime_files, final_memtime_file):
+	final_command_line = '';
+	final_real_time = 0.0;
+	final_cpu_time = 0.0;
+	final_user_time = 0.0;
+	final_system_time = 0.0;
+	final_time_unit = '';
+	final_max_rss = 0;
+	final_mem_unit = '';
+
+	i = 0;
+	for memtime_file in memtime_files:
+		i += 1;
+		sys.stderr.write('Parsing memtime file "%s"...\n' % (memtime_file));
+
+		[cmdline, realtime, cputime, usertime, systemtime, maxrss, time_unit, mem_unit] = parse_memtime(memtime_file);
+		if (i == 1):
+			final_command_line = cmdline;
+			final_real_time = realtime;
+			final_cpu_time = cputime;
+			final_user_time = usertime;
+			final_system_time = systemtime;
+			final_max_rss += maxrss;
+			final_time_unit = time_unit;
+			final_mem_unit = mem_unit;
+		else:
+			if (time_unit == final_time_unit and mem_unit == final_mem_unit):
+				final_command_line += '; ' + cmdline;
+				final_real_time += realtime;
+				final_cpu_time += cputime;
+				final_user_time += usertime;
+				final_system_time += systemtime;
+				final_max_rss += maxrss;
+			else:
+				sys.stderr.write('Memory or time units not the same in all files! Instead of handling this, we decided to be lazy and just give up.\n');
+				break;
+
+	try:
+		fp = open(final_memtime_file, 'w');
+	except Exception, e:
+		sys.stderr.write('ERROR: Could not open file "%s" for writing!\n' % (final_memtime_file));
+		return;
+
+	if (final_cpu_time <= 0.0):
+		final_cpu_time = final_user_time + final_system_time;
+
+	fp.write('Command line: %s\n' % (final_command_line));
+	fp.write('Real time: %f %s\n' % (final_real_time, final_time_unit));
+	fp.write('CPU time: %f %s\n' % (final_cpu_time, final_time_unit));
+	fp.write('User time: %f %s\n' % (final_user_time, final_time_unit));
+	fp.write('System time: %f %s\n' % (final_system_time, final_time_unit));
+	fp.write('Maximum RSS: %f %s\n' % (final_max_rss, final_mem_unit));
+
+	fp.close();
+
+
+
+
+
+# Command line: /home/isovic/work/eclipse-workspace/git/aligneval/src/../tools/cgmemtime/cgmemtime -o /home/isovic/work/eclipse-workspace/git/aligneval/src/../evaluation/reads-simulated/OxfordNanopore-pbsim-observed_graphmap-1d-1k/saccharomyces_cerevisiae/GraphMap-v1.memtime /home/isovic/work/eclipse-workspace/git/aligneval/wrappers/../aligners/graphmap/bin/Linux-x64//graphmap -v 5 -t 4 -B 0 -b 3 -r /home/isovic/work/eclipse-workspace/git/aligneval/src/../reference-genomes/saccharomyces_cerevisiae.fa -d /home/isovic/work/eclipse-workspace/git/aligneval/src/../reads-simulated/OxfordNanopore-pbsim-observed_graphmap-1d-1k/saccharomyces_cerevisiae/reads.fa -o /home/isovic/work/eclipse-workspace/git/aligneval/src/../evaluation/reads-simulated/OxfordNanopore-pbsim-observed_graphmap-1d-1k/saccharomyces_cerevisiae/GraphMap-v1.sam
+# Real time:   18.164 s
+# CPU time:   61.911 s
+# User time:   54.086 s
+# System time:    7.825 s
+# Maximum RSS: 1327 MB
 
 def peek(fp, num_chars):
 	data = fp.read(num_chars);
@@ -689,7 +804,7 @@ def run(run_type, reads_file, reference_file, machine_name, output_path, output_
 		parameters = '-v';
 
 	elif ((machine_name.lower() == 'nanopore')):
-		parameters = '-v -e.7 -k10';
+		parameters = '-v -e.7 -k12';
 
 	# elif ((machine_name.lower() == 'debug')):
 	# 	parameters = '-t %s' % str(num_threads);
@@ -700,13 +815,17 @@ def run(run_type, reads_file, reference_file, machine_name, output_path, output_
 
 
 	if (output_suffix != ''):
-		output_filename = '%s-%s' % (MAPPER_NAME, output_suffix);
+		if (output_suffix.lower().endswith('.sam')):
+			output_filename = os.path.splitext(output_suffix)[0];
+		else:
+			output_filename = '%s-%s' % (MAPPER_NAME, output_suffix);
 	else:
 		output_filename = MAPPER_NAME;
 	
 	reads_basename = os.path.splitext(os.path.basename(reads_file))[0];
 	sam_file = '%s/%s.sam' % (output_path, output_filename);
 	memtime_file = '%s/%s.memtime' % (output_path, output_filename);
+	memtime_file_hpcmapper = '%s/%s-hpcmapper.memtime' % (output_path, output_filename);
 	memtime_file_index = '%s/%s-index.memtime' % (output_path, output_filename);
 
 	### Convert the input files to absolute paths.
@@ -786,19 +905,52 @@ def run(run_type, reads_file, reference_file, machine_name, output_path, output_
 	###         808 tagttcacct[tgtggcgggtaactaaatcgtag-acagcgccgacaacgtg-caatcccgaccattatgaacgttgaggtgccggagtccctg  12.0%
 	sys.stderr.write('[%s wrapper] Running %s...\n' % (MAPPER_NAME, MAPPER_NAME));
 	if (run_type == 'align' or run_type == 'run'):
-		command = '%s %s/HPCmapper %s %s %s' % (measure_command_wrapper(memtime_file), ALIGNER_PATH, parameters, daligner_reference_file, daligner_reads_file);
+		command = '%s %s/HPCmapper %s %s %s' % (measure_command_wrapper(memtime_file_hpcmapper), ALIGNER_PATH, parameters, daligner_reference_file, daligner_reads_file);
 		[out, err] = execute_command_get_stdout(command);
+
+		print out;
+
+		### Replace ampersands with '\n' so it's easier to split commands and add measurement calls to the commands.
+		out = out.replace('&&', '\n');
 		### LAshow should extract the overlaps/alignments from the LAS file.
 		las_file = '%s.%s.las' % (os.path.basename(daligner_reference_file), os.path.basename(daligner_reads_file));
-		commands_daligner = 'PATH="$PATH:%s"\necho $PATH\ncd %s\n%s\nLAshow -a %s %s %s > %s.txt' % (ALIGNER_PATH, output_path, out, daligner_reference_file, daligner_reads_file, las_file, las_file);
-		commands_daligner = '; '.join([command for command in commands_daligner.split('\n') if (len(command) > 0 and command[0] != '#')]);
+		out += '\nLAshow -a %s %s %s > %s.txt' % (daligner_reference_file, daligner_reads_file, las_file, las_file);
+		# commands_daligner = 'PATH="$PATH:%s"\necho $PATH\ncd %s\n%s %s\nLAshow -a %s %s %s > %s.txt' % (ALIGNER_PATH, output_path, measure_command_wrapper(memtime_file), out, daligner_reference_file, daligner_reads_file, las_file, las_file);
+
+		# for line in out.split('\n'):
+		# 	print '%s\n' % line;
+		# print '---------------';
+
+		### Prepare measurement command for each line of the generated script.
+		daligner_out_formatted = [command.split('#')[0].strip() for command in out.split('\n') if (len(command.split('#')[0].strip()) > 0)]
+		memtime_files = [];
+		i = 0;
+		while (i < len(daligner_out_formatted)):
+			memtime_file_i = '%s/%s-%d.memtime' % (output_path, output_filename, i);
+			memtime_files.append(memtime_file_i);
+			measure_command_i = measure_command_wrapper(memtime_file_i);
+			daligner_out_formatted[i] = '%s %s' % (measure_command_i, daligner_out_formatted[i]);
+			i += 1;
+		joined_commands = '; '.join(daligner_out_formatted);
+
+		### Add the paths so the commands can be executed properly.
+		commands_daligner = 'PATH="$PATH:%s"; echo $PATH; cd %s; %s' % (ALIGNER_PATH, output_path, joined_commands);
 		execute_command(commands_daligner);
 		sys.stderr.write('\n');
+
+		final_memtime_file = memtime_file;
+		parse_memtime_files_and_accumulate(memtime_files, final_memtime_file);
+
+		for memtime_file in memtime_files:
+			try:
+				os.remove(memtime_file);
+			except OSError:
+				pass;
 
 		convert_to_sam('%s/%s.txt' % (output_path, las_file), daligner_reference_file, daligner_reads_file, header_conversion_hash, sam_file);
 
 	elif (run_type == 'overlap'):
-		command = '%s %s/HPCdaligner %s %s' % (measure_command_wrapper(memtime_file), ALIGNER_PATH, parameters, daligner_reads_file);
+		command = '%s %s/HPCdaligner %s %s' % (measure_command_wrapper(memtime_file_hpcmapper), ALIGNER_PATH, parameters, daligner_reads_file);
 		[out, err] = execute_command_get_stdout(command);
 		### LAshow should extract the overlaps/alignments from the LAS file.
 		las_file = '%s.1.las' % (daligner_reads_file);
@@ -853,7 +1005,7 @@ def verbose_usage_and_exit():
 	sys.stderr.write('\n');
 	sys.stderr.write('\t- mode          - either "align", "overlap" or "install". If "install" other parameters can be ommitted.\n');
 	sys.stderr.write('\t- machine_name  - "illumina", "roche", "pacbio", "nanopore" or "default".\n');
-	sys.stderr.write('\t- output_suffix - suffix for the output filename.\n');
+	sys.stderr.write('\t- output_suffix - suffix for the output filename. If this parameter ends with ".sam", the value will be used as full output filename.\n');
 
 	exit(0);
 
