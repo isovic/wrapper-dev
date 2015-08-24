@@ -1,4 +1,20 @@
 #! /usr/bin/python
+###
+###
+###
+### Script written by Ivan Sovic, August 2015.
+### All rights reserved.
+###
+###
+###
+# Some comments on DALIGNER.
+#
+# Important about DB generation: DALIGNER splits the input reference fasta into chunks of non 'N' bases, as well as into chromosomes.
+# E.g. Let's say we have hg19_chr3 as a reference. That is only one chromosome (or, only one sequence). However, fasta2DAM will generate 21 reference sequence.
+# This corresponds to the number of breakpoints present in the chr3.
+# As another example, if you convert S. Cerevisiae S288c, you will get exactly 16 sequences as expected.
+
+
 
 import re;
 
@@ -84,6 +100,8 @@ def get_single_read(fp):
 def get_fastq_headers_and_lengths(fastq_path):
 	headers = [];
 	lengths = [];
+	### DALIGNER splits each read/sequence into 'subreads' at every N position. That's why bread index does not necessarily correspond to the actual sequence ID.
+	daligner_seq_id = [];	### Contains an array of tuples (seq_id, seq_header, start_offset).
 
 	fp_in = None;
 
@@ -93,6 +111,8 @@ def get_fastq_headers_and_lengths(fastq_path):
 		print 'ERROR: Could not open file "%s" for reading!' % fastq_path;
 		exit(1);
 	
+	seq_id = 0;
+
 	while True:
 		[header, read] = get_single_read(fp_in);
 		
@@ -100,9 +120,28 @@ def get_fastq_headers_and_lengths(fastq_path):
 			break;
 		headers.append(header);
 		lengths.append(len(read[1]));
+
+		seq = read[1];
+
+		# i = 0;
+		# while (i < len(seq)):
+		# 	if (seq[i] != 'N' and (i == 0 or (i > 0 and seq[i-1] == 'N'))):
+		# 		daligner_seq_id.append( (seq_id, header, i) );
+		# 	i += 1;
+		i = 0;
+		while (i < len(seq)):
+			if (i == 0 or (i > 0 and seq[i] == 'N' and seq[i-1] != 'N')):
+				daligner_seq_id.append( (seq_id, header, i) );
+			i += 1;
 		
+		seq_id += 1;
+
 	fp_in.close();
-	return [headers, lengths];
+
+	# print 'len(daligner_seq_id) = %d' % (len(daligner_seq_id));
+	# exit(1);
+
+	return [headers, lengths, daligner_seq_id];
 
 
 
@@ -512,7 +551,7 @@ class Overlap:
 
 
 
-	def convert_to_sam(self, ref_headers, read_headers, read_seqs, read_quals, header_conversion_hash):
+	def convert_to_sam(self, ref_headers, ref_daligner_seq_id, read_headers, read_seqs, read_quals, header_conversion_hash):
 		# num_clip_front = int(qstart) - 1;
 		# num_clip_back = int(qlen) - (int(qend));
 		# sam_cigar = convert_btop_to_cigar(btop, num_clip_front, num_clip_back, sstrand);
@@ -526,9 +565,11 @@ class Overlap:
 
 		# qname = header_conversion_hash[qname];
 
+		daligner_seq_id = ref_daligner_seq_id[self.bread-1];	### Contains an array of tuples (seq_id, seq_header, start_offset).
+
 		flag = 0 if (self.orient == 'n') else 16;
-		rname = ref_headers[self.bread-1];
-		pos = self.bstart + 1;
+		rname = daligner_seq_id[1];
+		pos = daligner_seq_id[2] + self.bstart + 1;
 		mapq = 255;
 		sam_seq = read_seqs[self.aread-1] if (self.orient == 'n') else revcomp_seq(read_seqs[self.aread-1]);
 		sam_qual = read_quals[self.aread-1] if (self.orient == 'n') else read_quals[self.aread-1][::-1];
@@ -595,9 +636,9 @@ def convert_to_sam(alignment_file, daligner_reference, daligner_reads, header_co
 		sys.stderr.write('ERROR: Could not open file "%s" for writing!\n' % out_sam_file);
 		exit(1);
 
-	[ref_headers, ref_lengths] = get_fastq_headers_and_lengths(daligner_reference);
+	[ref_headers, ref_lengths, ref_daligner_seq_id] = get_fastq_headers_and_lengths(daligner_reference);
 	[read_headers, read_seqs, read_quals] = read_fastq(daligner_reads);
-	[read_headers, read_seqs, read_quals] = read_fastq(daligner_reads);
+	# [read_headers, read_seqs, read_quals] = read_fastq(daligner_reads);
 
 	STATE_INIT = 0;
 	STATE_HEADER = 1;
@@ -759,7 +800,7 @@ def convert_to_sam(alignment_file, daligner_reference, daligner_reads, header_co
 
 			m = p_overlap_line.match(line);
 			if (m):
-				sam_line = ovl.convert_to_sam(ref_headers, read_headers, read_seqs, read_quals, header_conversion_hash);
+				sam_line = ovl.convert_to_sam(ref_headers, ref_daligner_seq_id, read_headers, read_seqs, read_quals, header_conversion_hash);
 				num_sam_lines += 1;
 				fp_out.write(sam_line + '\n');
 	 			# if ('1     362 n   [1,075,548..1,079,360]' in ovl.original_line.strip()):
@@ -773,7 +814,7 @@ def convert_to_sam(alignment_file, daligner_reference, daligner_reads, header_co
 		current_state = next_state;
 
 	if (ovl):
-		sam_line = ovl.convert_to_sam(ref_headers, read_headers, read_seqs, read_quals, header_conversion_hash);
+		sam_line = ovl.convert_to_sam(ref_headers, ref_daligner_seq_id, read_headers, read_seqs, read_quals, header_conversion_hash);
 		num_sam_lines += 1;
 		fp_out.write(sam_line + '\n');
 
@@ -797,14 +838,17 @@ def run(run_type, reads_file, reference_file, machine_name, output_path, output_
 	num_threads = multiprocessing.cpu_count() / 2;
 
 	if ((machine_name.lower() == 'illumina') or (machine_name.lower() == 'roche')):
-		parameters = '-v -s1 -h10 -e.9';	### I get poor results on Illumina data (simulated), concretely DALIGNER mapps 0 reads. I think the problem is 'alignment but simply a set of trace points, typically every 100bp or so, that allow the', and reads that I simulated were 150bp in length.
+		# parameters = '-v -s1 -h10 -e.9';
+		### I get poor results on Illumina data (simulated), concretely DALIGNER mapps 0 reads. I think the problem is 'alignment but
+		### simply a set of trace points, typically every 100bp or so, that allow the', and reads that I simulated were 150bp in length.
+		parameters = '-v';
 
 	elif ((machine_name.lower() == 'pacbio')):
 		# parameters = '-t %s -x pacbio' % str(num_threads);
 		parameters = '-v';
 
 	elif ((machine_name.lower() == 'nanopore')):
-		parameters = '-v -e.7 -k12';
+		parameters = '-v -e.7 -k10';
 
 	# elif ((machine_name.lower() == 'debug')):
 	# 	parameters = '-t %s' % str(num_threads);
