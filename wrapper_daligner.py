@@ -123,16 +123,16 @@ def get_fastq_headers_and_lengths(fastq_path):
 
 		seq = read[1];
 
-		# i = 0;
-		# while (i < len(seq)):
-		# 	if (seq[i] != 'N' and (i == 0 or (i > 0 and seq[i-1] == 'N'))):
-		# 		daligner_seq_id.append( (seq_id, header, i) );
-		# 	i += 1;
 		i = 0;
 		while (i < len(seq)):
-			if (i == 0 or (i > 0 and seq[i] == 'N' and seq[i-1] != 'N')):
+			if (seq[i] != 'N' and (i == 0 or (i > 0 and seq[i-1] == 'N'))):
 				daligner_seq_id.append( (seq_id, header, i) );
 			i += 1;
+		# i = 0;
+		# while (i < len(seq)):
+		# 	if (i == 0 or (i > 0 and seq[i] == 'N' and seq[i-1] != 'N')):
+		# 		daligner_seq_id.append( (seq_id, header, i) );
+		# 	i += 1;
 		
 		seq_id += 1;
 
