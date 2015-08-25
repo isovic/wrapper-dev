@@ -481,9 +481,9 @@ class Overlap:
 
 	def verbose_as_string(self):
 		ret = '';
-		ret += 'bread = %d\n' % (self.bread);
-		ret += 'aread = %d\n' % (self.aread);
-		ret += 'orient = %s\n' % (self.orient);
+		ret += 'bread = %d\n' % (self.bread);						### Reference hit ID
+		ret += 'aread = %d\n' % (self.aread);						### Read ID
+		ret += 'orient = %s\n' % (self.orient);						### 'n' or 'c'
 		ret += 'bstart = %d\n' % (self.bstart);
 		ret += 'bend = %d\n' % (self.bend);
 		ret += 'astart = %d\n' % (self.astart);
@@ -590,6 +590,7 @@ class Overlap:
 		sam_line += '0\t';									# 9. tlen
 		sam_line += '%s\t' % (sam_seq);						# 10. seq
 		sam_line += '%s\t' % (sam_qual);					# 11. qual
+		sam_line += 'AS:i:%d\t' % (self.aend - self.astart + 1 - sam_NM);									# NM, custom
 		sam_line += 'NM:i:%d\t' % (sam_NM);									# NM, custom
 		# sam_line += 'AS:i:%s\t' % (score.strip());			# AS, custom
 
@@ -1002,7 +1003,11 @@ def run(run_type, reads_file, reference_file, machine_name, output_path, output_
 		commands_daligner = '; '.join([command for command in commands_daligner.split('\n') if (len(command) > 0 and command[0] != '#')]);
 		execute_command(commands_daligner);
 		sys.stderr.write('\n');
-	
+
+	elif (run_type == 'onlyconvert'):
+		las_file = '%s.%s.las' % (os.path.basename(daligner_reference_file), os.path.basename(daligner_reads_file));
+		convert_to_sam('%s/%s.txt' % (output_path, las_file), daligner_reference_file, daligner_reads_file, header_conversion_hash, sam_file);
+
 	sys.stderr.write('[%s wrapper] %s wrapper script finished processing.\n' % (MAPPER_NAME, MAPPER_NAME));
 
 	return sam_file
@@ -1061,7 +1066,7 @@ if __name__ == "__main__":
 		download_and_install();
 		exit(0);
 
-	elif (sys.argv[1] == 'align' or sys.argv[1] == 'run'):
+	elif (sys.argv[1] == 'align' or sys.argv[1] == 'run' or sys.argv[1] == 'onlyconvert'):
 		if (len(sys.argv) < 6):
 			verbose_usage_and_exit();
 
