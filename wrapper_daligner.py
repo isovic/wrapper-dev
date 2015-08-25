@@ -992,6 +992,7 @@ def run(run_type, reads_file, reference_file, machine_name, output_path, output_
 			except OSError:
 				pass;
 
+		sys.stderr.write('[%s wrapper] Converting the output to SAM format at path "%s"...\n' % (MAPPER_NAME, sam_file));
 		convert_to_sam('%s/%s.txt' % (output_path, las_file), daligner_reference_file, daligner_reads_file, header_conversion_hash, sam_file);
 
 	elif (run_type == 'overlap'):
@@ -1005,6 +1006,7 @@ def run(run_type, reads_file, reference_file, machine_name, output_path, output_
 		sys.stderr.write('\n');
 
 	elif (run_type == 'onlyconvert'):
+		sys.stderr.write('[%s wrapper] Converting the output to SAM format at path "%s"...\n' % (MAPPER_NAME, sam_file));
 		las_file = '%s.%s.las' % (os.path.basename(daligner_reference_file), os.path.basename(daligner_reads_file));
 		convert_to_sam('%s/%s.txt' % (output_path, las_file), daligner_reference_file, daligner_reads_file, header_conversion_hash, sam_file);
 
