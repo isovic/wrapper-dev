@@ -375,6 +375,9 @@ def wrap_fasta_file(fasta_file, daligner_fasta_file):
 
 		current_read += 1;
 
+		if (len(read[1]) <= 10):	### DALIGNER has a lower length limit of 10bp.
+			continue;
+
 		read[1] = re.sub("(.{500})", "\\1\n", read[1], 0, re.DOTALL);	### Wrap the sequence line, because DALIGNER has a 9998bp line len limit.
 		if (len(read) == 4):
 			read[3] = re.sub("(.{500})", "\\1\n", read[3], 0, re.DOTALL);	### Wrap the qual line, because DALIGNER has a 9998bp line len limit.
@@ -408,6 +411,10 @@ def convert_reads_to_pacbio_format(reads_file, daligner_reads_file):
 			break;
 
 		current_read += 1;
+
+		if (len(read[1]) <= 10):	### DALIGNER has a lower length limit of 10bp.
+			sys.stderr.write('Found a read shorter than 10bp. Removing from the output.\n');
+			continue;
 
 		### Check if the read is already formatted like PacBio.
 		if (header.count('/') == 2 and 'RQ' in header):
@@ -591,7 +598,7 @@ class Overlap:
 		sam_line += '%s\t' % (sam_seq);						# 10. seq
 		sam_line += '%s\t' % (sam_qual);					# 11. qual
 		sam_line += 'AS:i:%d\t' % (self.aend - self.astart + 1 - sam_NM);									# NM, custom
-		sam_line += 'NM:i:%d\t' % (sam_NM);									# NM, custom
+		sam_line += 'NM:i:%d' % (sam_NM);									# NM, custom
 		# sam_line += 'AS:i:%s\t' % (score.strip());			# AS, custom
 
 		return sam_line;
