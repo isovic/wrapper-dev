@@ -874,6 +874,14 @@ def run(run_type, reads_file, reference_file, machine_name, output_path, output_
 	else:
 		output_filename = MAPPER_NAME;
 	
+	# Check if the given input file is a FASTA or FASTQ, and convert to FASTA if necessary.
+	if (reads_file[-1] == 'q'):
+		sys.stderr.write('[%s wrapper] Converting FASTQ to FASTA...\n' % (MAPPER_NAME));
+		reads_fasta = reads_file[0:-1] + 'a';
+		fastqparser.convert_to_fasta(reads_file, reads_fasta);
+		reads_file = reads_fasta;
+		sys.stderr.write('\n');
+
 	reads_basename = os.path.splitext(os.path.basename(reads_file))[0];
 	sam_file = '%s/%s.sam' % (output_path, output_filename);
 	memtime_file = '%s/%s.memtime' % (output_path, output_filename);
