@@ -1,6 +1,7 @@
 *
 *.*
 !wrapper_daligner.py
+!wrapper_marginalign.py
 !README.md
 !data/reads/reads-1d.fa
 !data/reads/reads-pacbio.fa
