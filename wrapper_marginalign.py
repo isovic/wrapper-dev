@@ -526,7 +526,7 @@ def download_and_install():
 	sys.stderr.write('[%s wrapper] Started installation of %s.\n' % (MAPPER_NAME, MAPPER_NAME));
 
 	sys.stderr.write('[%s wrapper] Cloning git repository.\n' % (MAPPER_NAME));
-	command = 'cd %s; git clone %s' % (ALIGNERS_PATH_ROOT_ABS, ALIGNER_URL);
+	command = 'cd %s; git clone %s' % (ALIGNERS_PATH_ROOT_ABS_, ALIGNER_URL);
 	execute_command(command);
 # 
 	sys.stderr.write('[%s wrapper] Initializing submodules.\n' % (MAPPER_NAME));
