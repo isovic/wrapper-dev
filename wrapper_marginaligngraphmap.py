@@ -588,7 +588,8 @@ def run(run_type, reads_file, reference_file, machine_name, output_path, output_
 
 	sys.stderr.write('[%s wrapper] Fixing SAM qname and rname headers to original values. Temp SAM file: "%s", final SAM file: "%s".\n' % (MAPPER_NAME, temp_sam_file, sam_file));
 	fix_sam_qnames_after_marginAlign(temp_sam_file, ref_header_hash, read_header_hash, sam_file);
-	execute_command('cp %s %s' % (temp_memtime_file, memtime_file));
+	execute_command('rm %s' % (temp_sam_file));
+	execute_command('mv %s %s' % (temp_memtime_file, memtime_file));
 
 	sys.stderr.write('[%s wrapper] %s wrapper script finished processing.\n' % (MAPPER_NAME, MAPPER_NAME));
 
