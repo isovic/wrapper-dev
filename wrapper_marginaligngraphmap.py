@@ -35,11 +35,10 @@ except:
 	USE_BASICDEFINES_ = False;
 	ALIGNERS_PATH_ROOT_ABS_ = SCRIPT_PATH;
 
-# ALIGNER_URL = 'https://github.com/isovic/marginAlign.git'; # 'git://github.com/benedictpaten/marginAlign.git';
-ALIGNER_URL = 'git://github.com/benedictpaten/marginAlign.git';
+ALIGNER_URL = 'https://github.com/isovic/marginAlign.git';
 ALIGNER_PATH = ALIGNERS_PATH_ROOT_ABS_ + '/marginAlign/';
 BIN = 'marginAlign';
-MAPPER_NAME = 'marginAlign';
+MAPPER_NAME = 'marginAlignGraphMap';
 
 RUNNING_PATH = os.path.dirname(sys.argv[0]);
 
@@ -502,28 +501,28 @@ def run(run_type, reads_file, reference_file, machine_name, output_path, output_
 		# parameters = '-v -s1 -h10 -e.9';
 		### I get poor results on Illumina data (simulated), concretely DALIGNER mapps 0 reads. I think the problem is 'alignment but
 		### simply a set of trace points, typically every 100bp or so, that allow the', and reads that I simulated were 150bp in length.
-		parameters = ' ';
+		parameters = '--graphmap';
 
 	elif ((machine_name.lower() == 'pacbio')):
 		# parameters = '-t %s -x pacbio' % str(num_threads);
-		parameters = ' ';
+		parameters = '--graphmap';
 
 	elif ((machine_name.lower() == 'nanopore')):
-		parameters = ' ';
+		parameters = '--graphmap';
 
 	elif ((machine_name.lower() == 'nanopore1d')):
-		parameters = ' ';
+		parameters = '--graphmap';
 
 	elif ((machine_name.lower() == 'nanopore2d')):
-		parameters = ' ';
+		parameters = '--graphmap';
 
 	# elif ((machine_name.lower() == 'debug')):
 	# 	parameters = '-t %s' % str(num_threads);
 
 	else:			# default
-		parameters = ' --em';
+		parameters = '--graphmap --em';
 
-	used_mapper = 'last';
+	used_mapper = 'graphmap';
 
 	if (output_suffix != ''):
 		if (output_suffix.lower().endswith('.sam')):
@@ -568,7 +567,6 @@ def run(run_type, reads_file, reference_file, machine_name, output_path, output_
 	reference_path = os.path.dirname(reference_file);
 	output_model_file = '%s/hmm-%s-%s.txt' % (reference_path, machine_name.lower(), used_mapper);
 	jobtree = '%s/jobTree' % (output_path);
-	
 
 	if (run_type == 'align' or run_type == 'run'):
 		sys.stderr.write('[%s wrapper] Running %s...\n' % (MAPPER_NAME, MAPPER_NAME));
@@ -604,9 +602,9 @@ def download_and_install():
 	sys.stderr.write('[%s wrapper] Started installation of %s.\n' % (MAPPER_NAME, MAPPER_NAME));
 
 	sys.stderr.write('[%s wrapper] Cloning git repository.\n' % (MAPPER_NAME));
-	command = 'cd %s; git clone %s' % (ALIGNERS_PATH_ROOT_ABS_, ALIGNER_URL);
+	command = 'cd %s; mkdir %s; cd %s; git clone %s' % (ALIGNERS_PATH_ROOT_ABS_, MAPPER_NAME, MAPPER_NAME, ALIGNER_URL,);
 	execute_command(command);
-# 
+	
 	sys.stderr.write('[%s wrapper] Initializing submodules.\n' % (MAPPER_NAME));
 	command = 'cd %s; git submodule update --init' % (ALIGNER_PATH);
 	execute_command(command);
