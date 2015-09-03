@@ -426,6 +426,10 @@ def run(run_type, reads_file, reference_file, machine_name, output_path, output_
 	parameters = '';
 	num_threads = multiprocessing.cpu_count() / 2;
 
+	# output_model_file = '%s/hmm-%s-%s.txt' % (reads_path, reads_basename, used_mapper);
+	output_model_file = '%s/hmm-%s-%s.txt' % (reference_path, machine_name.lower(), used_mapper);
+	jobtree = '%s/jobTree' % (output_path);
+
 	if ((machine_name.lower() == 'illumina') or (machine_name.lower() == 'roche')):
 		# parameters = '-v -s1 -h10 -e.9';
 		### I get poor results on Illumina data (simulated), concretely DALIGNER mapps 0 reads. I think the problem is 'alignment but
@@ -449,7 +453,7 @@ def run(run_type, reads_file, reference_file, machine_name, output_path, output_
 	# 	parameters = '-t %s' % str(num_threads);
 
 	else:			# default
-		parameters = '--em';
+		parameters = ' --em --outputModel=%s' % output_model_file;;
 
 
 	used_mapper = 'last';
@@ -493,10 +497,6 @@ def run(run_type, reads_file, reference_file, machine_name, output_path, output_
 	memtime_file = '%s/%s.memtime' % (output_path, output_filename);
 	memtime_file_index = '%s/%s-index.memtime' % (output_path, output_filename);
 
-	# output_model_file = '%s/hmm-%s-%s.txt' % (reads_path, reads_basename, used_mapper);
-	output_model_file = '%s/hmm-%s-%s.txt' % (reference_path, machine_name.lower(), used_mapper);
-	jobtree = '%s/jobTree' % (output_path);
-
 	
 
 	if (run_type == 'align' or run_type == 'run'):
@@ -504,15 +504,16 @@ def run(run_type, reads_file, reference_file, machine_name, output_path, output_
 		if ((not os.path.exists(output_model_file)) or ('--em' in parameters)):
 			sys.stderr.write('[%s wrapper] Expectation maximization will be used.\n' % (MAPPER_NAME));
 			if (not ('--em' in parameters)):
-				parameters += ' --em  ';
+				parameters += ' --em --outputModel=%s' % output_model_file;
 		else:
 			sys.stderr.write('[%s wrapper] Existing model found. Will be using the model values.\n' % (MAPPER_NAME));
+			parameters += ' --inputModel=%s' % output_model_file;
 
 		if (os.path.exists(jobtree)):
 			sys.stderr.write('[%s wrapper] Removing old jobtree folder.\n' % (MAPPER_NAME));
 			execute_command('rm -r %s' % (jobtree));
 
-		execute_command('%s %s/marginAlign %s %s %s --jobTree %s %s --outputModel=%s --maxThreads=%d --logInfo --defaultMemory=100000000000 --defaultCpu=%d' % (measure_command_wrapper(memtime_file), ALIGNER_PATH, marginAlign_reads_file, marginAlign_reference_file, sam_file, jobtree, parameters, output_model_file, num_threads, num_threads));
+		execute_command('%s %s/marginAlign %s %s %s --jobTree %s %s --maxThreads=%d --logInfo --defaultMemory=100000000000 --defaultCpu=%d' % (measure_command_wrapper(memtime_file), ALIGNER_PATH, marginAlign_reads_file, marginAlign_reference_file, sam_file, jobtree, parameters, num_threads, num_threads));
 
 	sys.stderr.write('[%s wrapper] %s wrapper script finished processing.\n' % (MAPPER_NAME, MAPPER_NAME));
 
