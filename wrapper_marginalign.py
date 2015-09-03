@@ -426,13 +426,6 @@ def run(run_type, reads_file, reference_file, machine_name, output_path, output_
 	parameters = '';
 	num_threads = multiprocessing.cpu_count() / 2;
 
-	# output_model_file = '%s/hmm-%s-%s.txt' % (reads_path, reads_basename, used_mapper);
-	reads_basename = os.path.splitext(os.path.basename(reads_file))[0];
-	reads_path = os.path.dirname(reads_file);
-	reference_path = os.path.dirname(reference_file);
-	output_model_file = '%s/hmm-%s-%s.txt' % (reference_path, machine_name.lower(), used_mapper);
-	jobtree = '%s/jobTree' % (output_path);
-
 	if ((machine_name.lower() == 'illumina') or (machine_name.lower() == 'roche')):
 		# parameters = '-v -s1 -h10 -e.9';
 		### I get poor results on Illumina data (simulated), concretely DALIGNER mapps 0 reads. I think the problem is 'alignment but
@@ -496,14 +489,22 @@ def run(run_type, reads_file, reference_file, machine_name, output_path, output_
 	memtime_file = '%s/%s.memtime' % (output_path, output_filename);
 	memtime_file_index = '%s/%s-index.memtime' % (output_path, output_filename);
 
+	# output_model_file = '%s/hmm-%s-%s.txt' % (reads_path, reads_basename, used_mapper);
+	reads_basename = os.path.splitext(os.path.basename(reads_file))[0];
+	reads_path = os.path.dirname(reads_file);
+	reference_path = os.path.dirname(reference_file);
+	output_model_file = '%s/hmm-%s-%s.txt' % (reference_path, machine_name.lower(), used_mapper);
+	jobtree = '%s/jobTree' % (output_path);
 	
 
 	if (run_type == 'align' or run_type == 'run'):
 		sys.stderr.write('[%s wrapper] Running %s...\n' % (MAPPER_NAME, MAPPER_NAME));
 		if ((not os.path.exists(output_model_file)) or ('--em' in parameters)):
 			sys.stderr.write('[%s wrapper] Expectation maximization will be used.\n' % (MAPPER_NAME));
-			if (not ('--em' in parameters)):
-				parameters += ' --em --outputModel=%s' % output_model_file;
+			if (('--em' in parameters) == False):
+				parameters += ' --em';
+			if (('--outputModel' in parameters) == False):
+				parameters += ' --outputModel=%s' % output_model_file;
 		else:
 			sys.stderr.write('[%s wrapper] Existing model found. Will be using the model values.\n' % (MAPPER_NAME));
 			parameters += ' --inputModel=%s' % output_model_file;
