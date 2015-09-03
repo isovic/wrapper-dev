@@ -375,15 +375,19 @@ def modify_reference_headers(input_fastq_path, out_fastq_path):
 		sys.stderr.write('ERROR: Could not open file "%s" for writing! Exiting.\n' % out_fastq_path);
 		exit(0);
 	num_matches = 0;
+	header_hash = {};
 	while True:
 		[header, read] = get_single_read(fp_in);
 		if (len(read) == 0):
 			break;
-		read[0] = read[0][0] + re.sub('[^0-9a-zA-Z]', '_', read[0][1:]); # re.sub("[|:", "_", read[0][1:]);
+		new_header = read[0][0] + re.sub('[^0-9a-zA-Z]', '_', read[0][1:]); # re.sub("[|:", "_", read[0][1:]);
+		header_hash[new_header[1:]] = read[0][1:];
+		read[0] = new_header;
 		fp_out.write('\n'.join(read) + '\n');
 	sys.stderr.write('\n');
 	fp_in.close();
 	fp_out.close();
+	return header_hash;
 
 ### Modifies the FASTQ headers to replace all special chars with '_'.
 ### Also, filters out sequences longer than 50000bp, because marginAlign passes CIGAR strings as space-separated ops through arguments to another program.
@@ -401,18 +405,66 @@ def modify_read_headers_and_remove_long_ones(input_fastq_path, out_fastq_path):
 		sys.stderr.write('ERROR: Could not open file "%s" for writing! Exiting.\n' % out_fastq_path);
 		exit(0);
 	num_matches = 0;
+	header_hash = {};
 	while True:
 		[header, read] = get_single_read(fp_in);
 		if (len(read) == 0):
 			break;
 		if (len(read[1]) <= 50000):
-			read[0] = read[0][0] + re.sub('[^0-9a-zA-Z]', '_', read[0][1:]); # re.sub("[|:", "_", read[0][1:]);
+			# read[0] = read[0][0] + re.sub('[^0-9a-zA-Z]', '_', read[0][1:]); # re.sub("[|:", "_", read[0][1:]);
+			new_header = read[0][0] + re.sub('[^0-9a-zA-Z]', '_', read[0][1:]); # re.sub("[|:", "_", read[0][1:]);
+			header_hash[new_header[1:]] = read[0][1:];
+			read[0] = new_header;
 			fp_out.write('\n'.join(read) + '\n');
 	sys.stderr.write('\n');
 	fp_in.close();
 	fp_out.close();
+	return header_hash;
 
+def fix_sam_qnames_after_marginAlign(input_sam_path, ref_header_hash, read_header_hash, out_sam_path):
+	if (input_sam_path == out_sam_path):
+		sys.stderr.write('ERROR: Input and output SAM files are the same! Skipping the update of qname and rname values.\n');
+		return;
+	try:
+		fp_in = open(input_sam_path, 'r');
+	except:
+		sys.stderr.write('ERROR: Could not open file "%s" for reading! Exiting.\n' % input_sam_path);
+		exit(0);
+	try:
+		fp_out = open(out_sam_path, 'w');
+	except:
+		sys.stderr.write('ERROR: Could not open file "%s" for writing! Exiting.\n' % out_sam_path);
+		exit(0);
+	i = 0;
+	for line in fp_in:
+		i += 1;
+		line = line.strip();
+		if (len(line) == 0 or line[0] == '@'):
+			fp_out.write(line + '\n');
+			continue;
+		sys.stderr.write('\rLine %d' % (i));
 
+		split_line = line.split('\t');
+		qname = split_line[0];
+		rname = split_line[2];
+
+		if (qname == '*' or rname == '*'):
+			fp_out.write(line + '\n');
+			continue;
+
+		try:
+			original_qname = read_header_hash[qname];
+		except:
+			original_qname = qname;
+		try:
+			original_rname = ref_header_hash[rname];
+		except:
+			original_rname = qname;
+
+		new_line = line.replace(qname, original_qname);
+		new_line = new_line.replace(rname, original_rname);
+		fp_out.write(new_line + '\n');
+	sys.stderr.write('\n');
 
 # Function 'run' should provide a standard interface for running a mapper. Given input parameters, it should run the
 # alignment process, and convert any custom output results to the SAM format. Function should return a string with the
@@ -476,15 +528,16 @@ def run(run_type, reads_file, reference_file, machine_name, output_path, output_
 	### marginAlign crashes. Since NCBI headers are heavy on those, we need to make a temporary reads file which will modify the headers.
 	sys.stderr.write('[%s wrapper] Creating a copy of the reference file with fixed headers.\n' % (MAPPER_NAME));
 	marginAlign_reference_file = os.path.splitext(reference_file)[0] + '-marginAlign.fa';
-	modify_reference_headers(reference_file, marginAlign_reference_file);
+	ref_header_hash = modify_reference_headers(reference_file, marginAlign_reference_file);
 
 	### The special chars can also make a problem if present in the reads headers. But additionally, if the reads are too long,
 	### marginAlign will crash because it tries to pass the SAM alignments to the PecanRealign via commandline arguments.
 	sys.stderr.write('[%s wrapper] Creating a copy of the reads file with fixed headers and maximum read length of 50000bp.\n' % (MAPPER_NAME));
 	marginAlign_reads_file = os.path.splitext(reads_file)[0] + '-marginAlign.fastq';
-	modify_read_headers_and_remove_long_ones(reads_file, marginAlign_reads_file);
+	read_header_hash = modify_read_headers_and_remove_long_ones(reads_file, marginAlign_reads_file);
 
-	sam_file = '%s/%s.sam' % (output_path, output_filename);
+	temp_sam_file = '%s/%s.sam' % (output_path, output_filename);
+	sam_file = '%s/fixed-%s.sam' % (output_path, output_filename);
 	memtime_file = '%s/%s.memtime' % (output_path, output_filename);
 	memtime_file_index = '%s/%s-index.memtime' % (output_path, output_filename);
 
@@ -512,7 +565,10 @@ def run(run_type, reads_file, reference_file, machine_name, output_path, output_
 			sys.stderr.write('[%s wrapper] Removing old jobtree folder.\n' % (MAPPER_NAME));
 			execute_command('rm -r %s' % (jobtree));
 
-		execute_command('%s %s/marginAlign %s %s %s --jobTree %s %s --maxThreads=%d --logInfo --defaultMemory=100000000000 --defaultCpu=%d' % (measure_command_wrapper(memtime_file), ALIGNER_PATH, marginAlign_reads_file, marginAlign_reference_file, sam_file, jobtree, parameters, num_threads, num_threads));
+		# execute_command('%s %s/marginAlign %s %s %s --jobTree %s %s --maxThreads=%d --logInfo --defaultMemory=100000000000 --defaultCpu=%d' % (measure_command_wrapper(memtime_file), ALIGNER_PATH, marginAlign_reads_file, marginAlign_reference_file, temp_sam_file, jobtree, parameters, num_threads, num_threads));
+
+	sys.stderr.write('[%s wrapper] Fixing SAM qname and rname headers to original values.\n' % (MAPPER_NAME));
+	fix_sam_qnames_after_marginAlign(temp_sam_file, ref_header_hash, read_header_hash, sam_file);
 
 	sys.stderr.write('[%s wrapper] %s wrapper script finished processing.\n' % (MAPPER_NAME, MAPPER_NAME));
 
