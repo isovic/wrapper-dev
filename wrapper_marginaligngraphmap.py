@@ -36,7 +36,7 @@ except:
 	ALIGNERS_PATH_ROOT_ABS_ = SCRIPT_PATH;
 
 ALIGNER_URL = 'https://github.com/isovic/marginAlign.git';
-ALIGNER_PATH = ALIGNERS_PATH_ROOT_ABS_ + '/marginAlign/';
+ALIGNER_PATH = ALIGNERS_PATH_ROOT_ABS_ + '/marginAlignGraphMap/marginAlign/';
 BIN = 'marginAlign';
 MAPPER_NAME = 'marginAlignGraphMap';
 
@@ -604,7 +604,7 @@ def download_and_install():
 	sys.stderr.write('[%s wrapper] Cloning git repository.\n' % (MAPPER_NAME));
 	command = 'cd %s; mkdir %s; cd %s; git clone %s' % (ALIGNERS_PATH_ROOT_ABS_, MAPPER_NAME, MAPPER_NAME, ALIGNER_URL,);
 	execute_command(command);
-	
+
 	sys.stderr.write('[%s wrapper] Initializing submodules.\n' % (MAPPER_NAME));
 	command = 'cd %s; git submodule update --init' % (ALIGNER_PATH);
 	execute_command(command);
