@@ -567,7 +567,7 @@ def run(run_type, reads_file, reference_file, machine_name, output_path, output_
 
 		# execute_command('%s %s/marginAlign %s %s %s --jobTree %s %s --maxThreads=%d --logInfo --defaultMemory=100000000000 --defaultCpu=%d' % (measure_command_wrapper(memtime_file), ALIGNER_PATH, marginAlign_reads_file, marginAlign_reference_file, temp_sam_file, jobtree, parameters, num_threads, num_threads));
 
-	sys.stderr.write('[%s wrapper] Fixing SAM qname and rname headers to original values.\n' % (MAPPER_NAME));
+	sys.stderr.write('[%s wrapper] Fixing SAM qname and rname headers to original values. Temp SAM file: "%s", final SAM file: "%s".\n' % (MAPPER_NAME, temp_sam_file, sam_file));
 	fix_sam_qnames_after_marginAlign(temp_sam_file, ref_header_hash, read_header_hash, sam_file);
 
 	sys.stderr.write('[%s wrapper] %s wrapper script finished processing.\n' % (MAPPER_NAME, MAPPER_NAME));
