@@ -427,6 +427,9 @@ def run(run_type, reads_file, reference_file, machine_name, output_path, output_
 	num_threads = multiprocessing.cpu_count() / 2;
 
 	# output_model_file = '%s/hmm-%s-%s.txt' % (reads_path, reads_basename, used_mapper);
+	reads_basename = os.path.splitext(os.path.basename(reads_file))[0];
+	reads_path = os.path.dirname(reads_file);
+	reference_path = os.path.dirname(reference_file);
 	output_model_file = '%s/hmm-%s-%s.txt' % (reference_path, machine_name.lower(), used_mapper);
 	jobtree = '%s/jobTree' % (output_path);
 
@@ -488,10 +491,6 @@ def run(run_type, reads_file, reference_file, machine_name, output_path, output_
 	sys.stderr.write('[%s wrapper] Creating a copy of the reads file with fixed headers and maximum read length of 50000bp.\n' % (MAPPER_NAME));
 	marginAlign_reads_file = os.path.splitext(reads_file)[0] + '-marginAlign.fastq';
 	modify_read_headers_and_remove_long_ones(reads_file, marginAlign_reads_file);
-
-	reads_basename = os.path.splitext(os.path.basename(reads_file))[0];
-	reads_path = os.path.dirname(reads_file);
-	reference_path = os.path.dirname(reference_file);
 
 	sam_file = '%s/%s.sam' % (output_path, output_filename);
 	memtime_file = '%s/%s.memtime' % (output_path, output_filename);
