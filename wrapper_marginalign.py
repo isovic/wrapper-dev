@@ -440,7 +440,25 @@ def fix_sam_qnames_after_marginAlign(input_sam_path, ref_header_hash, read_heade
 		i += 1;
 		line = line.strip();
 		if (len(line) == 0 or line[0] == '@'):
-			fp_out.write(line + '\n');
+			if (line.startswith('@SQ')):
+				split_line = line.split('\t');
+				found_hname = False;
+				for param in split_line:
+					if (param.startswith('SN:')):
+						hname = param.split(':')[-1];
+						try:
+							original_hname = read_header_hash[hname];
+						except:
+							original_hname = hname;
+						new_line = line.replace(hname, original_hname);
+						fp_out.write(new_line + '\n');
+						found_hname = True;
+						break;
+				if (found_hname == False):
+					fp_out.write(line + '\n');
+
+			else:
+				fp_out.write(line + '\n');
 			continue;
 		sys.stderr.write('\rLine %d' % (i));
 
