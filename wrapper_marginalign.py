@@ -449,8 +449,7 @@ def run(run_type, reads_file, reference_file, machine_name, output_path, output_
 	# 	parameters = '-t %s' % str(num_threads);
 
 	else:			# default
-		parameters = ' --em --outputModel=%s' % output_model_file;
-
+		parameters = ' --em';
 
 	used_mapper = 'last';
 
