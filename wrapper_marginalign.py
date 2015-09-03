@@ -447,7 +447,7 @@ def fix_sam_qnames_after_marginAlign(input_sam_path, ref_header_hash, read_heade
 					if (param.startswith('SN:')):
 						hname = param.split(':')[-1];
 						try:
-							original_hname = read_header_hash[hname];
+							original_hname = ref_header_hash[hname];
 						except:
 							original_hname = hname;
 						new_line = line.replace(hname, original_hname);
