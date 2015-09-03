@@ -448,8 +448,10 @@ def fix_sam_qnames_after_marginAlign(input_sam_path, ref_header_hash, read_heade
 						hname = param.split(':')[-1];
 						try:
 							original_hname = ref_header_hash[hname];
+							sys.stderr.write('Found hname: "%s".\n' % (hname));
 						except:
 							original_hname = hname;
+							sys.stderr.write('Could not find hname "%s".\n' % (hname));
 						new_line = line.replace(hname, original_hname);
 						fp_out.write(new_line + '\n');
 						found_hname = True;
