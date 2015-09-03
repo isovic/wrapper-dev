@@ -558,7 +558,8 @@ def run(run_type, reads_file, reference_file, machine_name, output_path, output_
 
 	temp_sam_file = '%s/%s.sam' % (output_path, output_filename);
 	sam_file = '%s/fixed-%s.sam' % (output_path, output_filename);
-	memtime_file = '%s/%s.memtime' % (output_path, output_filename);
+	temp_memtime_file = '%s/%s.memtime' % (output_path, output_filename);
+	memtime_file = '%s/fixed-%s.memtime' % (output_path, output_filename);
 	memtime_file_index = '%s/%s-index.memtime' % (output_path, output_filename);
 
 	# output_model_file = '%s/hmm-%s-%s.txt' % (reads_path, reads_basename, used_mapper);
@@ -585,10 +586,11 @@ def run(run_type, reads_file, reference_file, machine_name, output_path, output_
 			sys.stderr.write('[%s wrapper] Removing old jobtree folder.\n' % (MAPPER_NAME));
 			execute_command('rm -r %s' % (jobtree));
 
-		# execute_command('%s %s/marginAlign %s %s %s --jobTree %s %s --maxThreads=%d --logInfo --defaultMemory=100000000000 --defaultCpu=%d' % (measure_command_wrapper(memtime_file), ALIGNER_PATH, marginAlign_reads_file, marginAlign_reference_file, temp_sam_file, jobtree, parameters, num_threads, num_threads));
+		execute_command('%s %s/marginAlign %s %s %s --jobTree %s %s --maxThreads=%d --logInfo --defaultMemory=100000000000 --defaultCpu=%d' % (measure_command_wrapper(temp_memtime_file), ALIGNER_PATH, marginAlign_reads_file, marginAlign_reference_file, temp_sam_file, jobtree, parameters, num_threads, num_threads));
 
 	sys.stderr.write('[%s wrapper] Fixing SAM qname and rname headers to original values. Temp SAM file: "%s", final SAM file: "%s".\n' % (MAPPER_NAME, temp_sam_file, sam_file));
 	fix_sam_qnames_after_marginAlign(temp_sam_file, ref_header_hash, read_header_hash, sam_file);
+	execute_command('cp %s %s' % (temp_memtime_file, memtime_file));
 
 	sys.stderr.write('[%s wrapper] %s wrapper script finished processing.\n' % (MAPPER_NAME, MAPPER_NAME));
 
