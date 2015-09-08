@@ -266,59 +266,6 @@ def parse_memtime_files_and_accumulate(memtime_files, final_memtime_file):
 # System time:    7.825 s
 # Maximum RSS: 1327 MB
 
-def peek(fp, num_chars):
-	data = fp.read(num_chars);
-	if len(data) == 0:
-		return '';
-	fp.seek(num_chars * -1, 1);
-	return data;
-
-# Returns a single read from the given FASTA/FASTQ file.
-# Parameter header contains only the header of the read.
-# Parameter lines contains all lines of the read, which include:
-# - header
-# - seq
-# - '+' if FASTQ
-# - quals if FASTQ
-# Parameter lines is an array of strings, each for one component.
-# Please note that multiline FASTA/FASTQ entries (e.g. sequence line)
-# will be truncated into one single line.
-def get_single_read(fp):
-	lines = [];
-	
-	line = fp.readline();
-	header = line.rstrip();
-	header_leading_char = '';
-	if (len(header) > 0):
-		sequence_separator = header[0];
-		header_leading_char = header[0];
-		header = header[1:];			# Strip the '>' or '@' sign from the beginning.
-	else:
-		return ['', []];
-	
-	next_char = peek(fp, 1);
-	
-	line_string = '';
-	lines.append(header_leading_char + header);
-	
-	num_lines = 1;
-	#while len(next_char) > 0 and next_char != sequence_separator or (next_char == '@' and num_lines < 4):
-	while (len(next_char) > 0 and (next_char != sequence_separator or (next_char == '@' and num_lines < 4))):
-		line = fp.readline();
-		if (line.rstrip() == '+' or line.rstrip() == ('+' + header)):
-		#if (line.rstrip()[0] == '+'):
-			lines.append(line_string);
-			lines.append(line.rstrip());
-			line_string = '';
-		else:
-			line_string += line.rstrip();
-		next_char = peek(fp, 1);
-		num_lines += 1;
-		
-	lines.append(line_string);
-	
-	return [header, lines];
-
 def read_fastq(fastq_path):
 	headers = [];
 	seqs = [];
@@ -349,6 +296,33 @@ def read_fastq(fastq_path):
 	fp_in.close();
 	
 	return [headers, seqs, quals];
+
+def convert_to_fasta(fastq_path, out_fasta_path):
+	headers = [];
+	seqs = [];
+	quals = [];
+	fp_in = None;
+	fp_out = None;
+	try:
+		fp_in = open(fastq_path, 'r');
+	except IOError:
+		print 'ERROR: Could not open file "%s" for reading!' % fastq_path;
+		return;
+	try:
+		fp_out = open(out_fasta_path, 'w');
+	except IOError:
+		print 'ERROR: Could not open file "%s" for writing!' % out_fasta_path;
+		fp_in.close();
+		return;
+	while True:
+		[header, read] = get_single_read(fp_in);
+		if (len(header) == 0):
+			break;
+		seq = read[1];
+		fp_out.write('>' + header + '\n');
+		fp_out.write(seq + '\n');
+	fp_in.close();
+	fp_out.close();
 
 
 
@@ -878,7 +852,7 @@ def run(run_type, reads_file, reference_file, machine_name, output_path, output_
 	if (reads_file[-1] == 'q'):
 		sys.stderr.write('[%s wrapper] Converting FASTQ to FASTA...\n' % (MAPPER_NAME));
 		reads_fasta = reads_file[0:-1] + 'a';
-		fastqparser.convert_to_fasta(reads_file, reads_fasta);
+		convert_to_fasta(reads_file, reads_fasta);
 		reads_file = reads_fasta;
 		sys.stderr.write('\n');
 
