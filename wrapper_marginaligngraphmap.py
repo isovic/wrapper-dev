@@ -516,6 +516,9 @@ def run(run_type, reads_file, reference_file, machine_name, output_path, output_
 	elif ((machine_name.lower() == 'nanopore2d')):
 		parameters = '--graphmap';
 
+	elif ((machine_name.lower() == 'anchor')):
+		parameters = '--graphmapanchor';
+
 	# elif ((machine_name.lower() == 'debug')):
 	# 	parameters = '-t %s' % str(num_threads);
 
