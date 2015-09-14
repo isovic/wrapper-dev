@@ -832,6 +832,12 @@ def run(run_type, reads_file, reference_file, machine_name, output_path, output_
 	elif ((machine_name.lower() == 'nanopore')):
 		parameters = '-v -e.7 -k10';
 
+	elif ((machine_name.lower() == 'k9')):
+		parameters = '-v -e.7 -k9';
+
+	elif ((machine_name.lower() == 'k10')):
+		parameters = '-v -e.7 -k10';
+
 	# elif ((machine_name.lower() == 'debug')):
 	# 	parameters = '-t %s' % str(num_threads);
 
