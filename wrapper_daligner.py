@@ -349,7 +349,7 @@ def wrap_fasta_file(fasta_file, daligner_fasta_file):
 
 		current_read += 1;
 
-		if (len(read[1]) <= 10):	### DALIGNER has a lower length limit of 10bp.
+		if (len(read[1]) <= 20):	### DALIGNER has a lower length limit of 10bp.
 			continue;
 
 		read[1] = re.sub("(.{500})", "\\1\n", read[1], 0, re.DOTALL);	### Wrap the sequence line, because DALIGNER has a 9998bp line len limit.
@@ -823,7 +823,7 @@ def run(run_type, reads_file, reference_file, machine_name, output_path, output_
 		# parameters = '-v -s1 -h10 -e.9';
 		### I get poor results on Illumina data (simulated), concretely DALIGNER mapps 0 reads. I think the problem is 'alignment but
 		### simply a set of trace points, typically every 100bp or so, that allow the', and reads that I simulated were 150bp in length.
-		parameters = '-v';
+		parameters = '-v';ŠP
 
 	elif ((machine_name.lower() == 'pacbio')):
 		# parameters = '-t %s -x pacbio' % str(num_threads);
@@ -872,6 +872,10 @@ def run(run_type, reads_file, reference_file, machine_name, output_path, output_
 	if (run_type == 'align' or run_type == 'run'):
 		index_file = daligner_reference_file + '.dam';
 
+		if (os.path.exists(index_file)):
+			sys.stderr.write('[%s wrapper] The DALIGNER index file already exists ("%s"), removing.\n' % (MAPPER_NAME, index_file));
+			os.remove(index_file);
+
 		# Run the indexing process, and measure execution time and memory.
 		# daligner_reference_file = reference_file if (reference_file.lower().endswith('fasta')) else (reference_file + '.fasta');
 		sys.stderr.write('[%s wrapper] Wrapping the sequences in the reference FASTA file. DALIGNER has a line length limit of 9998 chars.\n' % (MAPPER_NAME));
@@ -900,6 +904,10 @@ def run(run_type, reads_file, reference_file, machine_name, output_path, output_
 		sys.stderr.write('\n');
 
 	sys.stderr.write('[%s wrapper] Converting the reads file into a DB file...\n' % (MAPPER_NAME));
+	daligner_reads_file_db = '%s.db' % (daligner_reads_file);
+	if (os.path.exists(daligner_reads_file_db)):
+		sys.stderr.write('[%s wrapper] The DALIGNER reads DB file already exists ("%s"), removing.\n' % (MAPPER_NAME, daligner_reads_file_db));
+		os.remove(daligner_reads_file_db);
 	command = '%s %s/fasta2DB %s.db %s' % (measure_command_wrapper(memtime_file_index), ALIGNER_DB_PATH, daligner_reads_file, daligner_reads_file);
 	execute_command(command);
 	sys.stderr.write('\n');
